@@ -4,7 +4,7 @@
 server_dir=/opt/minecraft/server
 jarfile=server-1.19.2.jar
 logfile=/var/log/minecraft/out.log
-memory=2048M
+memory=3072M
 pidfile=/var/run/minecraft.pid
 user=minecraft
 restart_mode=0
@@ -56,15 +56,16 @@ if [ -d ${pidfile%/*} ]; then
 fi
 
 # Check server process status
-if [ -f $pidfile ]; then
+if [ -f $pidfile ] && [ ! -z "$(sudo cat $pidfile)" ]; then
     printf 'Found a PID...'
-    if ps -ef | grep " $(cat $pidfile) " | grep -v 'grep'; then
-        echo "$(cat $pidfile) is a running process"
+    if ps -ef | grep " $(sudo cat $pidfile) " | grep -v 'grep'; then
+        pid="$(ps -ef | grep " $(sudo cat $pidfile) " | grep -v grep | awk '{print $2}')"
+        echo "$pid is a running process"
         if [ $restart_mode -eq 1 ]; then
             echo "Restarting..."
-            sudo kill -9 $(cat $pidfile)
+            sudo kill -9 $(sudo cat $pidfile)
             if [ $? -ne 0 ]; then
-                echo "Failed to kill process $(cat $pidfile)"
+                echo "Failed to kill process $(sudo cat $pidfile)"
                 exit 1
             fi
         else
@@ -72,13 +73,13 @@ if [ -f $pidfile ]; then
             exit 1
         fi
     else
-        echo "$(cat $pidfile) is not a process"
+        echo "$(sudo cat $pidfile) is not a process"
         echo "Removing stale PID file"
-        sudo rm -f $pidfile
+        sudo echo "" >  $pidfile
     fi
 fi
 
-echo "Version: ${jarfile%%-*}"
+echo "Version: $jarfile"
 echo "Log: $logfile"
 echo "Starting..."
 
@@ -91,5 +92,5 @@ if [ $rc -ne 0 ]; then
     exit 1
 fi
 
-echo "$pid" > $pidfile
+sudo echo "$pid" > $pidfile
 echo "Started with PID: $pid ($pidfile)"
